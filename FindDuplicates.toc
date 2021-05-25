@@ -1,0 +1,11 @@
+## Author: Sappy (Alex)
+## Interface: 90005
+## Name: FindDuplicates
+## Notes: Quickly identifies items that share the same item ID.
+## SavedVariablesPerCharacter: FindDuplicatesPerCharacterDatabase
+## Title: FindDuplicates
+## Version: 0.0.0
+
+Events.lua
+ItemTypes.lua
+FindDuplicates.lua
