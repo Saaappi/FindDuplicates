@@ -19,6 +19,7 @@ local glowTimer = 3; -- The duration in seconds to make the slot glow.
 local GUILD_BANK_MAX_TABS = 8;
 local GUILD_BANK_MAX_SLOTS = 98;
 local VOID_STORAGE_MAX_TABS = 2;
+local bags = {};
 local frames = {
 	[-1] = "BankFrameItem",
 	[0] = "ContainerFrame1Item",
@@ -26,39 +27,15 @@ local frames = {
 	[2] = "ContainerFrame3Item",
 	[3] = "ContainerFrame4Item",
 	[4] = "ContainerFrame5Item",
+	[5] = "ContainerFrame6Item",
+	[6] = "ContainerFrame7Item",
+	[7] = "ContainerFrame8Item",
+	[8] = "ContainerFrame9Item",
+	[9] = "ContainerFrame10Item",
+	[10] = "ContainerFrame11Item",
+	[11] = "ContainerFrame12Item",
 };
-local slots = {
-	[1] = 30,
-	[2] = 29,
-	[3] = 28,
-	[4] = 27,
-	[5] = 26,
-	[6] = 25,
-	[7] = 24,
-	[8] = 23,
-	[9] = 22,
-	[10] = 21,
-	[11] = 20,
-	[12] = 19,
-	[13] = 18,
-	[14] = 17,
-	[15] = 16,
-	[16] = 15,
-	[17] = 14,
-	[18] = 13,
-	[19] = 12,
-	[20] = 11,
-	[21] = 10,
-	[22] = 9,
-	[23] = 8,
-	[24] = 7,
-	[25] = 6,
-	[26] = 5,
-	[27] = 4,
-	[28] = 3,
-	[29] = 2,
-	[30] = 1,
-};
+local bagConfigurationTable = {};
 
 -- Loop over the t.events array from the Events.lua file and register each event to the ScriptHandler.
 for _, event in ipairs(t.events) do
@@ -98,6 +75,28 @@ local function ContainsReturnValue(set, value) -- Check if the provided table co
 			return j;
 		end
 	end
+end
+
+local function FindFrameSlotID(set, bag, slot)
+	for i = 1, #set, 1 do
+		if set[i]["bag"] == bag and set[i]["slot"] == slot then
+			return set[i]["frame"];
+		end
+	end
+end
+
+local function BuildBagTable()
+	for bag = 0, 11, 1 do
+		local numContainerSlots = GetContainerNumSlots(bag);
+		for i = 1, numContainerSlots, 1 do
+			for j = numContainerSlots, 1, -1 do
+				table.insert(bags, { bag = bag, slot = i, frame = j});
+				numContainerSlots = numContainerSlots - 1;
+				break
+			end
+		end
+	end
+	FindDuplicatesPerCharacterDatabase = bags;
 end
 
 -- Slash commands
@@ -151,27 +150,31 @@ SlashCmdList["FindDuplicates"] = function(command, editbox)
 		for key, value in pairs(FindDuplicates(t.items)) do
 			for k, _ in pairs(value) do
 				local frame = ContainsReturnValue(frames, value["bag"]);
-				if value["bag"] >= 0 then
-					local slot = ContainsReturnValue(slots, value["slot"]);
-					ActionButton_ShowOverlayGlow(_G[frame..slot]);
-					C_Timer.After(0, function()
-						C_Timer.After(glowTimer, function()
-							ActionButton_HideOverlayGlow(_G[frame..slot]);
+				if frame then
+					if value["bag"] >= 0 then
+						local frameSlotID = FindFrameSlotID(bags, value["bag"], value["slot"]);
+						ActionButton_ShowOverlayGlow(_G[frame..frameSlotID]);
+						C_Timer.After(0, function()
+							C_Timer.After(glowTimer, function()
+								ActionButton_HideOverlayGlow(_G[frame..frameSlotID]);
+							end);
 						end);
-					end);
-				else
-					ActionButton_ShowOverlayGlow(_G[frame..value["slot"]]);
-					C_Timer.After(0, function()
-						C_Timer.After(glowTimer, function()
-							ActionButton_HideOverlayGlow(_G[frame..value["slot"]]);
+					else
+						ActionButton_ShowOverlayGlow(_G[frame..value["slot"]]);
+						C_Timer.After(0, function()
+							C_Timer.After(glowTimer, function()
+								ActionButton_HideOverlayGlow(_G[frame..value["slot"]]);
+							end);
 						end);
-					end);
+					end
 				end
 			end
 		end
 		-- Wipe all of the tables.
 		t.items = {};
 		t.duplicatedItems = {};
+	elseif command == "build" then
+		BuildBagTable();
 	end
 end
 
@@ -183,6 +186,12 @@ e:SetScript("OnEvent", function(self, event, ...) -- This adds an 'OnEvent' Scri
 			local duplicatedItems = {}; -- Empty table to hold duplicated item IDs.
 			t.items = items; -- Add the items array to the table, t.
 			t.duplicatedItems = duplicatedItems; -- Add the duplicatedItems array to the table, t.
+
+			if next(FindDuplicatesPerCharacterDatabase) == nil then
+				print(addonName .. ": Please run /fd build to make your bag table. This should be executed with your bank open.");
+			else
+				bags = FindDuplicatesPerCharacterDatabase;
+			end
 		end
 	end
 end);

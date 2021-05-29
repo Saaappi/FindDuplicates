@@ -6,7 +6,7 @@
 local addonName, t = ...;
 
 local itemTypes = { -- An integer-indexed array of the item types that should be ignored.
-	--"Consumable",
+	"Consumable",
 	"Quest",
 	"Reagent",
 	"Tradeskill",
