@@ -187,6 +187,10 @@ e:SetScript("OnEvent", function(self, event, ...) -- This adds an 'OnEvent' Scri
 			t.items = items; -- Add the items array to the table, t.
 			t.duplicatedItems = duplicatedItems; -- Add the duplicatedItems array to the table, t.
 
+			if FindDuplicatesPerCharacterDatabase == nil then -- To fix the nil error on login for new characters.
+				FindDuplicatesPerCharacterDatabase = {};
+			end
+			
 			if next(FindDuplicatesPerCharacterDatabase) == nil then
 				print(addonName .. ": Please run /fd build to make your bag table. This should be executed with your bank open.");
 			else
