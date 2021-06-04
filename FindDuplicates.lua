@@ -4,7 +4,6 @@
 ]]--
 
 --[[ TODO
-	- Fix the bug that doesn't mark all duped items..
 ]]--
 
 --[[
