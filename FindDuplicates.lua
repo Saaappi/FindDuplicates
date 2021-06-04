@@ -44,16 +44,21 @@ end
 -- Functions
 local function FindDuplicates(tbl)
 	local seenItems = {}; -- A table to track items we've seen.
-	for index, bagData in ipairs(tbl) do
-		for _, _ in pairs(bagData) do
-			if seenItems[bagData["itemID"]] then -- We've seen the item before.
-				t.duplicatedItems[bagData["itemID"]] = { bag = bagData["bag"], slot = bagData["slot"] };
-			else -- A new item.
-				seenItems[bagData["itemID"]] = true;
-			end
+	
+	-- Iterate over the table, hunting for dupes.
+	for k, v in pairs(tbl) do
+		if seenItems[v["itemID"]] then -- We've seen the item before.
+			t.duplicatedItems[v["itemID"]] = { bag = v["bag"], slot = v["slot"] };
+		else -- A new item.
+			seenItems[v["itemID"]] = true;
 		end
 	end
-	return t.duplicatedItems;
+	if next(t.duplicatedItems) == nil then
+		print("|cffFFFF66" .. addonName .. "|r: No duplicate items were found.");
+		return {}; -- Return an empty table to satisfy the function call and prevent an exception from being thrown.
+	else
+		return t.duplicatedItems;
+	end
 end
 
 local function Contains(set, value) -- Check if the provided table contains the provided value.
@@ -101,27 +106,22 @@ SlashCmdList["FindDuplicates"] = function(command, editbox)
 	local _, _, command, arguments = string.find(command, "%s?(%w+)%s?(.*)"); -- Using pattern matching the addon will be able to interpret subcommands.
 	if not command or command == "" then
 		-- Player Inventory / Bank
-		if BankSlotsFrame:IsVisible() then -- The player's personal bank is open.
-			for bag = -1, -1, 1 do -- The main bank window has a bag ID of -1.
-				for slot = 28, 1, -1 do -- The main bank window can only have 28 slots.
-					local itemID = GetContainerItemID(bag, slot);
-					local _, _, _, itemQuality = GetContainerItemInfo(bag, slot);
-					if itemID ~= nil and itemQuality > 0 then -- If itemID isn't nil and the item's quality is higher than Poor.
-						local _, _, _, _, _, itemType = GetItemInfo(itemID);
-						if not Contains(t.itemTypes, itemType) then -- Only add the item information if the item type isn't in the ignored item type list.
-							table.insert(t.items, { itemID = itemID, bag = bag, slot = slot }); -- Insert the itemID into a table for review.
-						end
-					end
-				end
-			end
-		end
-		for bag = 0, 11, 1 do -- A player can have their inventory, 4 extra bags for their inventory, and then up to 7 bank slots.
-			for slot = GetContainerNumSlots(bag), 1, -1 do -- Start at the last slot in the bag and work backward to the first slot. The decrementer is -1.
+		--[[
+			-1: This is the player's bank frame. It's always 28 slots.
+			0-11:	These are the player's base inventory to their extra 4 bags (bags 0-4) and the extra bags on their bank (bags 5-11).
+		]]
+		for bag = -1, 11, 1 do
+			for slot = GetContainerNumSlots(bag), 1, -1 do -- Blizzard's API iterates the inventory in reverse.
 				local itemID = GetContainerItemID(bag, slot);
 				local _, _, _, itemQuality = GetContainerItemInfo(bag, slot);
-				if itemID ~= nil and itemQuality > 0 then -- If itemID isn't nil and the item's quality is higher than Poor.
-					local _, _, _, _, _, itemType = GetItemInfo(itemID); -- We want the itemType to ignore Tradeskill items (cloth, leather, etc...)
-					if not Contains(t.itemTypes, itemType) then -- Only add the item information if the item type isn't in the ignored item type list.
+				--[[
+					- We don't want to add nil values to the table.
+					- We don't want to add items that are below common (white) quality.
+					- We don't want to add pets to the table because they're actually all the same item (82800 = "Pet Cage").
+				]]
+				if itemID ~= nil and itemID ~= 82800 and itemQuality > 0 then -- If itemID isn't nil and the item's quality is higher than Poor.
+					local _, _, _, _, _, itemType = GetItemInfo(itemID);
+					if not Contains(t.itemTypes, itemType) then -- Only add the item information if the item's type isn't ignored.
 						table.insert(t.items, { itemID = itemID, bag = bag, slot = slot }); -- Insert the itemID into a table for review.
 					end
 				end
@@ -187,7 +187,7 @@ e:SetScript("OnEvent", function(self, event, ...) -- This adds an 'OnEvent' Scri
 			end
 			
 			if next(FindDuplicatesPerCharacterDatabase) == nil then
-				print(addonName .. ": Please run /fd build to make your bag table. This should be executed with your bank open.");
+				print("|cffFFFF66" .. addonName .. "|r: Please run /fd build to make your bag table. This should be executed with your bank open.");
 			else
 				bags = FindDuplicatesPerCharacterDatabase;
 			end
