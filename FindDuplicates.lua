@@ -43,10 +43,13 @@ end
 
 -- Functions
 local function FindDuplicates(tbl)
-	for i, bagData in ipairs(tbl) do
-		for j, value in pairs(bagData) do
-			if j == "itemID" then
-				t.duplicatedItems[value] = { bag = value["bag"], slot = value["slot"] };
+	local seenItems = {}; -- A table to track items we've seen.
+	for index, bagData in ipairs(tbl) do
+		for _, _ in pairs(bagData) do
+			if seenItems[bagData["itemID"]] then -- We've seen the item before.
+				t.duplicatedItems[bagData["itemID"]] = { bag = bagData["bag"], slot = bagData["slot"] };
+			else -- A new item.
+				seenItems[bagData["itemID"]] = true;
 			end
 		end
 	end
