@@ -4,8 +4,7 @@
 ]]--
 
 --[[ TODO
-	- Use the t.duplicatedItems table to add a glow to duplicated items in the player's inventory.
-	- Check for duplicated items in all forms of storage: personal bank, guild bank, and void storage.
+	- Fix the bug that doesn't mark all duped items..
 ]]--
 
 --[[
@@ -15,7 +14,7 @@
 ]]--
 local addonName, t = ...;
 local e = CreateFrame("Frame"); -- This is the invisible frame that will listen for registered events.
-local glowTimer = 3; -- The duration in seconds to make the slot glow.
+local glowTimer = 5; -- The duration in seconds to make the slot glow.
 local GUILD_BANK_MAX_TABS = 8;
 local GUILD_BANK_MAX_SLOTS = 98;
 local VOID_STORAGE_MAX_TABS = 2;
@@ -43,18 +42,11 @@ for _, event in ipairs(t.events) do
 end
 
 -- Functions
-local function FindDuplicates(set)
-	local seen = {}; -- Used to keep track of the elements that we've seen.
-	local element; -- Used to keep track of the current element of the table.
-	for key, value in ipairs(set) do
-		for k, v in pairs(value) do
-			if k == "itemID" then
-				element = v;
-				if seen[element] then
-					t.duplicatedItems[element] = { bag = value["bag"], slot = value["slot"] };
-				else
-					seen[element] = true;
-				end
+local function FindDuplicates(tbl)
+	for i, bagData in ipairs(tbl) do
+		for j, value in pairs(bagData) do
+			if j == "itemID" then
+				t.duplicatedItems[value] = { bag = value["bag"], slot = value["slot"] };
 			end
 		end
 	end
@@ -151,19 +143,19 @@ SlashCmdList["FindDuplicates"] = function(command, editbox)
 			for k, _ in pairs(value) do
 				local frame = ContainsReturnValue(frames, value["bag"]);
 				if frame then
-					if value["bag"] >= 0 then
+					if value["bag"] == -1 then -- This is the player's bank.
+						ActionButton_ShowOverlayGlow(_G[frame..value["slot"]]);
+						C_Timer.After(0, function()
+							C_Timer.After(glowTimer, function()
+								ActionButton_HideOverlayGlow(_G[frame..value["slot"]]);
+							end);
+						end);
+					elseif value["bag"] >= 0 then -- These are all the extra bags they can have in their bank.
 						local frameSlotID = FindFrameSlotID(bags, value["bag"], value["slot"]);
 						ActionButton_ShowOverlayGlow(_G[frame..frameSlotID]);
 						C_Timer.After(0, function()
 							C_Timer.After(glowTimer, function()
 								ActionButton_HideOverlayGlow(_G[frame..frameSlotID]);
-							end);
-						end);
-					else
-						ActionButton_ShowOverlayGlow(_G[frame..value["slot"]]);
-						C_Timer.After(0, function()
-							C_Timer.After(glowTimer, function()
-								ActionButton_HideOverlayGlow(_G[frame..value["slot"]]);
 							end);
 						end);
 					end
